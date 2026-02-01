@@ -1,0 +1,5 @@
+{
+  "name": "Cozy Jam",
+  "description": "A rotating, anonymous MIDI jam session. Plug in, wait your turn, and play loops in a friendly, cozy digital space.",
+  "requestFramePermissions": []
+}
