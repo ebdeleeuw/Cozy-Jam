@@ -6,7 +6,7 @@ import Visualizer from './components/Visualizer';
 import Controls from './components/Controls';
 import QueueDisplay from './components/QueueDisplay';
 import Header from './components/Header';
-import ReactionZone from './components/ReactionZone';
+import ReactionZone, { ReactionParticle } from './components/ReactionZone';
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -25,6 +25,8 @@ const App: React.FC = () => {
   const synthRef = useRef<SynthEngine | null>(null);
   const statusRef = useRef<PlayerStatus>('idle');
   const instrumentRef = useRef<InstrumentType>(InstrumentType.PIANO);
+  const [particles, setParticles] = useState<ReactionParticle[]>([]);
+  const maxParticles = 40;
 
   useEffect(() => {
     let cancelled = false;
@@ -89,6 +91,12 @@ const App: React.FC = () => {
           const synth = synthRef.current;
           const ctx = synth.ensureContext();
           synth.allNotesOff(ctx.currentTime + 0.02);
+          return;
+        }
+
+        if (message.type === 'reaction') {
+          if (typeof message.emoji !== 'string') return;
+          spawnBurst(message.emoji, 2);
         }
       };
 
@@ -248,6 +256,35 @@ const App: React.FC = () => {
     return true;
   };
 
+  const spawnParticle = (emoji: string, burst = false) => {
+    const id = Date.now() + Math.random();
+    const min = burst ? 10 : 20;
+    const max = burst ? 90 : 80;
+    const left = Math.floor(Math.random() * (max - min + 1)) + min;
+    const duration = 2 + Math.random() * 2;
+    const scale = 0.8 + Math.random() * 0.7;
+    const wobble = Math.random() > 0.5 ? 1 : -1;
+    const bottom = Math.random() * 20;
+
+    setParticles((prev) => {
+      const next = [...prev, { id, emoji, left, bottom, duration, scale, wobble }];
+      if (next.length > maxParticles) {
+        return next.slice(next.length - maxParticles);
+      }
+      return next;
+    });
+
+    window.setTimeout(() => {
+      setParticles((prev) => prev.filter((p) => p.id !== id));
+    }, duration * 1000);
+  };
+
+  const spawnBurst = (emoji: string, count: number) => {
+    for (let i = 0; i < count; i += 1) {
+      window.setTimeout(() => spawnParticle(emoji, true), i * 120);
+    }
+  };
+
   const handleJoinQueue = () => {
     const sent = send({ type: 'joinQueue' });
     if (!sent) {
@@ -260,6 +297,10 @@ const App: React.FC = () => {
   const handleStartLoop = () => send({ type: 'loopStart' });
   const handleCommitLoop = () => send({ type: 'loopCommit' });
   const handleClearLoop = () => send({ type: 'loopClear' });
+  const handleReact = (emoji: string) => {
+    spawnBurst(emoji, 4);
+    send({ type: 'reaction', emoji });
+  };
 
   return (
     <div className="min-h-screen bg-cozy-cream font-sans text-cozy-dark relative overflow-hidden selection:bg-rose-100">
@@ -297,7 +338,7 @@ const App: React.FC = () => {
       </main>
 
       {/* Floating UI Elements */}
-      <ReactionZone canReact={status !== 'playing'} />
+      <ReactionZone canReact={status !== 'playing'} particles={particles} onReact={handleReact} />
       <QueueDisplay queue={serverState.queue} />
 
       {/* Decorative background blobs */}

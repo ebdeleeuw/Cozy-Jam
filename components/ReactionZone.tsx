@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import { Heart, Zap, Sparkles, Music2 } from 'lucide-react';
 
-interface Reaction {
+export interface ReactionParticle {
   id: number;
   emoji: string;
   left: number; // percentage 0-100
@@ -13,6 +13,8 @@ interface Reaction {
 
 interface ReactionZoneProps {
   canReact: boolean;
+  particles: ReactionParticle[];
+  onReact: (emoji: string) => void;
 }
 
 const EMOJIS = [
@@ -22,51 +24,10 @@ const EMOJIS = [
   { icon: Music2, label: 'Jam', color: 'text-blue-500', bg: 'bg-blue-100', emoji: '🎵' },
 ];
 
-const ReactionZone: React.FC<ReactionZoneProps> = ({ canReact }) => {
-  const [particles, setParticles] = useState<Reaction[]>([]);
-
-  const spawnParticle = useCallback((emoji: string, burst = false) => {
-    const id = Date.now() + Math.random();
-    
-    // Spread logic: 
-    // If burst (user click), spread 10-90% width.
-    // If passive (auto), spread 20-80% width.
-    const min = burst ? 10 : 20;
-    const max = burst ? 90 : 80;
-    const left = Math.floor(Math.random() * (max - min + 1)) + min;
-    
-    // Randomize physics
-    const duration = 2 + Math.random() * 2; // 2s to 4s
-    const scale = 0.8 + Math.random() * 0.7; // 0.8x to 1.5x
-    const wobble = Math.random() > 0.5 ? 1 : -1;
-    const bottom = Math.random() * 20; // Start slightly varying heights
-
-    setParticles(prev => [...prev, { id, emoji, left, bottom, duration, scale, wobble }]);
-
-    // Cleanup
-    setTimeout(() => {
-      setParticles(prev => prev.filter(p => p.id !== id));
-    }, duration * 1000);
-  }, []);
-
+const ReactionZone: React.FC<ReactionZoneProps> = ({ canReact, particles, onReact }) => {
   const handleReactionClick = (emoji: string) => {
-    // Spawn a "burst" of particles for satisfying density
-    const count = 3 + Math.floor(Math.random() * 3); // 3 to 5 particles
-    for (let i = 0; i < count; i++) {
-      setTimeout(() => spawnParticle(emoji, true), i * 150);
-    }
+    onReact(emoji);
   };
-
-  // Passive ambient reactions
-  useEffect(() => {
-    const interval = setInterval(() => {
-       if (Math.random() > 0.7) {
-         const randomEmoji = EMOJIS[Math.floor(Math.random() * EMOJIS.length)].emoji;
-         spawnParticle(randomEmoji, false);
-       }
-    }, 1500);
-    return () => clearInterval(interval);
-  }, [spawnParticle]);
 
   return (
     <>

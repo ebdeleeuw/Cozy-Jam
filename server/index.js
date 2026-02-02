@@ -194,6 +194,15 @@ wss.on("connection", (ws) => {
         }
         return; // skip broadcastState for note messages
       }
+      case "reaction": {
+        if (typeof msg.emoji !== "string") break;
+        const payload = { type: "reaction", emoji: msg.emoji, from: id };
+        for (const [, wsClient] of sockets) {
+          if (wsClient.readyState !== WebSocket.OPEN) continue;
+          wsClient.send(JSON.stringify(payload));
+        }
+        return;
+      }
       default:
         break;
     }
