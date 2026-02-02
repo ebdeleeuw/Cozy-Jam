@@ -4,76 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cozy Jam</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap" rel="stylesheet">
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ['Nunito', 'sans-serif'],
-            },
-            colors: {
-              'cozy-cream': '#FDFBF7',
-              'cozy-dark': '#4A403A',
-              'cozy-pink': '#F4D9D0',
-              'cozy-green': '#D9EAD3',
-              'cozy-blue': '#D0E1F4',
-              'cozy-yellow': '#F9E4B7',
-            },
-            animation: {
-              'breathe': 'breathe 4s ease-in-out infinite',
-              'pulse-fast': 'pulse 0.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-              'float-up': 'floatUp 2.5s ease-out forwards',
-              'wiggle': 'wiggle 1s ease-in-out infinite',
-            },
-            keyframes: {
-              breathe: {
-                '0%, 100%': { transform: 'scale(1)', opacity: '0.8' },
-                '50%': { transform: 'scale(1.05)', opacity: '1' },
-              },
-              floatUp: {
-                '0%': { transform: 'translateY(0) scale(0.8)', opacity: '0' },
-                '10%': { opacity: '1', transform: 'translateY(-20px) scale(1)' },
-                '100%': { transform: 'translateY(-150px) scale(1.1) rotate(10deg)', opacity: '0' },
-              },
-              wiggle: {
-                '0%, 100%': { transform: 'rotate(-3deg)' },
-                '50%': { transform: 'rotate(3deg)' },
-              }
-            }
-          }
-        }
-      }
-    </script>
-    <style>
-      body {
-        background-color: #FDFBF7;
-        color: #4A403A;
-      }
-      /* Hide scrollbar for cleaner UI */
-      ::-webkit-scrollbar {
-        width: 0px;
-        background: transparent;
-      }
-      .bg-grain {
-        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
-      }
-    </style>
-  <script type="importmap">
-{
-  "imports": {
-    "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
-    "react/": "https://esm.sh/react@^19.2.4/",
-    "react": "https://esm.sh/react@^19.2.4",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/"
-  }
-}
-</script>
-</head>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
   <body>
     <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
   </body>
 </html>

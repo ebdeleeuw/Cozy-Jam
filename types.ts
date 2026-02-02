@@ -22,3 +22,10 @@ export interface AppState {
   currentInstrument: InstrumentType;
   loopStatus: LoopStatus;
 }
+
+export interface ServerState {
+  queue: User[];
+  activePlayer: User | null;
+  timeRemaining: number;
+  currentInstrument: InstrumentType;
+}

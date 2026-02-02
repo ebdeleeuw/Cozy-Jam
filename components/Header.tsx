@@ -1,6 +1,7 @@
 import React from 'react';
 import { Clock } from 'lucide-react';
 import { User } from '../types';
+import { TURN_DURATION } from '../constants';
 import MidiStatus from './MidiStatus';
 
 interface HeaderProps {
@@ -10,7 +11,7 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ activePlayer, timeRemaining, midiConnected }) => {
-  const progressPercent = (timeRemaining / 30) * 100;
+  const progressPercent = TURN_DURATION ? (timeRemaining / TURN_DURATION) * 100 : 0;
 
   return (
     <header className="fixed top-0 left-0 w-full p-6 flex justify-between items-start pointer-events-none z-40">

@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { AppState, InstrumentType, PlayerStatus, User, LoopStatus } from './types';
-import { MOCK_NAMES, MOCK_COLORS, TURN_DURATION, CURRENT_USER_MOCK } from './constants';
+import React, { useEffect, useMemo, useState } from 'react';
+import { InstrumentType, LoopStatus, PlayerStatus, ServerState, User } from './types';
+import { TURN_DURATION, WS_URL } from './constants';
 import Visualizer from './components/Visualizer';
 import Controls from './components/Controls';
 import QueueDisplay from './components/QueueDisplay';
@@ -8,158 +8,141 @@ import Header from './components/Header';
 import ReactionZone from './components/ReactionZone';
 
 const App: React.FC = () => {
-  // State initialization
-  const [currentUser] = useState<User>(CURRENT_USER_MOCK);
-  const [status, setStatus] = useState<PlayerStatus>('idle');
-  const [queue, setQueue] = useState<User[]>([]);
-  const [activePlayer, setActivePlayer] = useState<User | null>(null);
-  const [timeRemaining, setTimeRemaining] = useState(0);
-  const [currentInstrument, setCurrentInstrument] = useState<InstrumentType>(InstrumentType.PIANO);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [serverState, setServerState] = useState<ServerState>({
+    queue: [],
+    activePlayer: null,
+    timeRemaining: 0,
+    currentInstrument: InstrumentType.PIANO,
+  });
   const [loopStatus, setLoopStatus] = useState<LoopStatus>('inactive');
   const [midiConnected, setMidiConnected] = useState(false);
+  const [socket, setSocket] = useState<WebSocket | null>(null);
 
-  // Helper to generate a random bot user
-  const generateRandomUser = (): User => ({
-    id: Math.random().toString(36).substr(2, 9),
-    name: MOCK_NAMES[Math.floor(Math.random() * MOCK_NAMES.length)],
-    avatarColor: MOCK_COLORS[Math.floor(Math.random() * MOCK_COLORS.length)]
-  });
-
-  // --- Game Loop Simulation ---
-
-  // Timer simulation
   useEffect(() => {
-    let interval: number;
-    if (activePlayer && timeRemaining > 0) {
-      interval = window.setInterval(() => {
-        setTimeRemaining((prev) => prev - 1);
-      }, 1000);
-    } else if (activePlayer && timeRemaining === 0) {
-      // Turn ended
-      handleTurnEnd();
-    }
-    return () => clearInterval(interval);
-  }, [activePlayer, timeRemaining]);
+    const ws = new WebSocket(WS_URL);
+    setSocket(ws);
 
-  // Initial fake population of queue for demo purposes
-  useEffect(() => {
-    const initialQueue = [generateRandomUser(), generateRandomUser()];
-    setQueue(initialQueue);
-    // Start with someone playing
-    const firstPlayer = generateRandomUser();
-    setActivePlayer(firstPlayer);
-    setTimeRemaining(TURN_DURATION);
+    ws.onmessage = (event) => {
+      let message: any;
+      try {
+        message = JSON.parse(event.data);
+      } catch {
+        return;
+      }
 
-    // Simulate MIDI connection after a delay
-    setTimeout(() => {
-        setMidiConnected(true);
-    }, 2000);
+      if (message.type === 'hello') {
+        setCurrentUser(message.you);
+        return;
+      }
+
+      if (message.type === 'state') {
+        setServerState(message.state as ServerState);
+        if (message.you?.loopStatus) {
+          setLoopStatus(message.you.loopStatus as LoopStatus);
+        }
+      }
+    };
+
+    ws.onclose = () => {
+      setSocket(null);
+    };
+
+    return () => ws.close();
   }, []);
 
-  // --- Handlers ---
-
-  const handleTurnEnd = useCallback(() => {
-    // Logic to rotate players
-    const nextPlayer = queue.length > 0 ? queue[0] : null;
-    const newQueue = queue.slice(1); // Remove next player from queue
-
-    // If current player was me, I go back to idle
-    if (activePlayer?.id === currentUser.id) {
-      setStatus('idle');
-      setLoopStatus('inactive'); // Reset loop state
+  useEffect(() => {
+    if (!('requestMIDIAccess' in navigator)) {
+      setMidiConnected(false);
+      return;
     }
 
-    // Update active player
-    setActivePlayer(nextPlayer);
-    setQueue(newQueue);
-    
-    // Check if *I* am the next player
-    if (nextPlayer && nextPlayer.id === currentUser.id) {
-      setStatus('playing');
-    }
+    (navigator as any)
+      .requestMIDIAccess()
+      .then((access: any) => {
+        const hasInputs = access.inputs && access.inputs.size > 0;
+        setMidiConnected(hasInputs);
+        access.onstatechange = () => {
+          const hasAny = access.inputs && access.inputs.size > 0;
+          setMidiConnected(hasAny);
+        };
+      })
+      .catch(() => setMidiConnected(false));
+  }, []);
 
-    // Reset Timer
-    if (nextPlayer) {
-      setTimeRemaining(TURN_DURATION);
-    } else {
-      setTimeRemaining(0); // Silence
-    }
-  }, [queue, activePlayer, currentUser.id]);
+  const status: PlayerStatus = useMemo(() => {
+    if (!currentUser) return 'idle';
+    if (serverState.activePlayer?.id === currentUser.id) return 'playing';
+    if (serverState.queue.some((u) => u.id === currentUser.id)) return 'queued';
+    return 'idle';
+  }, [currentUser, serverState]);
 
-  const handleJoinQueue = () => {
-    setStatus('queued');
-    // Add me to the end of the queue
-    setQueue((prev) => [...prev, currentUser]);
+  const queuePosition = useMemo(() => {
+    if (!currentUser) return 0;
+    return serverState.queue.findIndex((u) => u.id === currentUser.id) + 1;
+  }, [currentUser, serverState.queue]);
+
+  const send = (payload: Record<string, unknown>) => {
+    if (!socket || socket.readyState !== WebSocket.OPEN) return;
+    socket.send(JSON.stringify(payload));
   };
 
-  const handleLeaveQueue = () => {
-    setStatus('idle');
-    setQueue((prev) => prev.filter(u => u.id !== currentUser.id));
-  };
-
-  // Loop Handlers
-  const handleStartLoop = () => {
-    setLoopStatus('recording');
-  };
-
-  const handleCommitLoop = () => {
-    setLoopStatus('playing');
-  };
-
-  const handleClearLoop = () => {
-    setLoopStatus('inactive');
-  };
-
-  const myQueuePosition = queue.findIndex(u => u.id === currentUser.id) + 1;
+  const handleJoinQueue = () => send({ type: 'joinQueue' });
+  const handleLeaveQueue = () => send({ type: 'leaveQueue' });
+  const handleSetInstrument = (inst: InstrumentType) => send({ type: 'setInstrument', instrument: inst });
+  const handleStartLoop = () => send({ type: 'loopStart' });
+  const handleCommitLoop = () => send({ type: 'loopCommit' });
+  const handleClearLoop = () => send({ type: 'loopClear' });
 
   return (
     <div className="min-h-screen bg-cozy-cream font-sans text-cozy-dark relative overflow-hidden selection:bg-rose-100">
-      
       {/* Noise Texture Overlay */}
       <div className="absolute inset-0 bg-grain pointer-events-none z-0" />
 
-      <Header 
-        activePlayer={activePlayer} 
-        timeRemaining={timeRemaining} 
+      <Header
+        activePlayer={serverState.activePlayer}
+        timeRemaining={serverState.timeRemaining}
         midiConnected={midiConnected}
       />
 
       <main className="flex flex-col items-center justify-center min-h-screen p-4 pb-24 relative z-10">
-        
         {/* The visual center of the app */}
         <div className="mb-8 relative">
-          <Visualizer 
-            activePlayer={activePlayer} 
-            status={status}
-          />
+          <Visualizer activePlayer={serverState.activePlayer} status={status} />
         </div>
 
         {/* User Interaction Layer */}
         <div className="z-20">
-          <Controls 
+          <Controls
             status={status}
-            currentInstrument={currentInstrument}
+            currentInstrument={serverState.currentInstrument}
             loopStatus={loopStatus}
             onJoinQueue={handleJoinQueue}
             onLeaveQueue={handleLeaveQueue}
-            onSetInstrument={setCurrentInstrument}
+            onSetInstrument={handleSetInstrument}
             onStartLoop={handleStartLoop}
             onCommitLoop={handleCommitLoop}
             onClearLoop={handleClearLoop}
-            queuePosition={myQueuePosition}
+            queuePosition={queuePosition}
           />
         </div>
-
       </main>
 
       {/* Floating UI Elements */}
       <ReactionZone canReact={status !== 'playing'} />
-      <QueueDisplay queue={queue} />
-      
+      <QueueDisplay queue={serverState.queue} />
+
       {/* Decorative background blobs */}
       <div className="fixed top-1/4 left-10 w-64 h-64 bg-cozy-green rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-breathe pointer-events-none" />
-      <div className="fixed bottom-1/4 right-10 w-72 h-72 bg-cozy-pink rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-breathe pointer-events-none" style={{ animationDelay: '2s' }} />
+      <div
+        className="fixed bottom-1/4 right-10 w-72 h-72 bg-cozy-pink rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-breathe pointer-events-none"
+        style={{ animationDelay: '2s' }}
+      />
 
+      {/* Footer note */}
+      <footer className="fixed bottom-4 left-1/2 -translate-x-1/2 text-xs text-stone-400 z-10">
+        {TURN_DURATION}s rotation • First-come, first-served • Anonymous only
+      </footer>
     </div>
   );
 };
