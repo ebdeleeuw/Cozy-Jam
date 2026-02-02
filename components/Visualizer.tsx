@@ -9,37 +9,19 @@ interface VisualizerProps {
 
 const Visualizer: React.FC<VisualizerProps> = ({ activePlayer, status, pulseSignal }) => {
   const [scale, setScale] = useState(1);
-  const targetRef = React.useRef(0);
-  const currentRef = React.useRef(0);
   const hasSignal = Boolean(activePlayer) || status === 'playing';
 
   useEffect(() => {
-    if (!hasSignal) return;
-    const boost = 0.35 + pulseSignal.velocity * 0.65;
-    targetRef.current = Math.min(1, Math.max(targetRef.current, boost));
+    if (!hasSignal) {
+      setScale(1);
+      return;
+    }
+
+    const strength = 1 + pulseSignal.velocity * 0.25;
+    setScale(strength);
+    const t = window.setTimeout(() => setScale(1), 140);
+    return () => window.clearTimeout(t);
   }, [pulseSignal, hasSignal]);
-
-  useEffect(() => {
-    let raf = 0;
-
-    const tick = () => {
-      if (!hasSignal) {
-        setScale(1);
-        currentRef.current = 0;
-        targetRef.current = 0;
-      } else {
-        // Smooth rise/decay
-        currentRef.current += (targetRef.current - currentRef.current) * 0.12;
-        targetRef.current *= 0.92;
-        const next = 1 + currentRef.current * 0.22;
-        setScale(next);
-      }
-      raf = requestAnimationFrame(tick);
-    };
-
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [hasSignal]);
 
   const isMePlaying = status === 'playing';
   const colorClass = activePlayer ? activePlayer.avatarColor.replace('text-white', '') : 'bg-gray-200';
