@@ -88,12 +88,24 @@ function ensureActivePlayer() {
   }
 }
 
+function broadcastAllNotesOff(fromId) {
+  const payload = { type: "allNotesOff", from: fromId };
+  for (const [, wsClient] of sockets) {
+    if (wsClient.readyState !== WebSocket.OPEN) continue;
+    wsClient.send(JSON.stringify(payload));
+  }
+}
+
 function advanceTurn() {
+  const prev = activePlayerId;
   activePlayerId = queue.shift() ?? null;
   if (activePlayerId) {
     timeRemaining = TURN_DURATION;
   } else {
     timeRemaining = 0;
+  }
+  if (prev) {
+    broadcastAllNotesOff(prev);
   }
 }
 
@@ -196,8 +208,9 @@ wss.on("connection", (ws) => {
     queue = queue.filter((q) => q !== id);
     if (activePlayerId === id) {
       advanceTurn();
+    } else {
+      broadcastState();
     }
-    broadcastState();
   });
 });
 

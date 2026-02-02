@@ -79,4 +79,13 @@ export class SynthEngine {
     voice.osc.stop(t + 0.09);
     this.voices.delete(note);
   }
+
+  allNotesOff(when?: number) {
+    const ctx = this.context;
+    if (!ctx) return;
+    const t = when ?? ctx.currentTime;
+    for (const note of this.voices.keys()) {
+      this.noteOff(note, t);
+    }
+  }
 }

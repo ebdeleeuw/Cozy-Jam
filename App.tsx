@@ -80,6 +80,15 @@ const App: React.FC = () => {
           } else {
             synth.noteOff(note, when);
           }
+          return;
+        }
+
+        if (message.type === 'allNotesOff') {
+          if (!synthRef.current) return;
+          if (currentUser && message.from === currentUser.id) return;
+          const synth = synthRef.current;
+          const ctx = synth.ensureContext();
+          synth.allNotesOff(ctx.currentTime + 0.02);
         }
       };
 
@@ -214,7 +223,13 @@ const App: React.FC = () => {
   }, [currentUser, serverState]);
 
   useEffect(() => {
+    const prev = statusRef.current;
     statusRef.current = status;
+    if (prev === 'playing' && status !== 'playing') {
+      if (synthRef.current) {
+        synthRef.current.allNotesOff();
+      }
+    }
   }, [status]);
 
   useEffect(() => {
