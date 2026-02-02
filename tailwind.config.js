@@ -14,12 +14,6 @@ export default {
         "cozy-blue": "#D0E1F4",
         "cozy-yellow": "#F9E4B7",
       },
-      animation: {
-        breathe: "breathe 4s ease-in-out infinite",
-        "pulse-fast": "pulse 0.5s cubic-bezier(0.4, 0, 0.6, 1) infinite",
-        "float-up": "floatUp 2.5s ease-out forwards",
-        wiggle: "wiggle 1s ease-in-out infinite",
-      },
       keyframes: {
         breathe: {
           "0%, 100%": { transform: "scale(1)", opacity: "0.8" },
@@ -37,6 +31,17 @@ export default {
           "0%, 100%": { transform: "rotate(-3deg)" },
           "50%": { transform: "rotate(3deg)" },
         },
+        pulseRing: {
+          "0%": { transform: "scale(0.95)", opacity: "0.55" },
+          "100%": { transform: "scale(1.35)", opacity: "0" },
+        },
+      },
+      animation: {
+        breathe: "breathe 4s ease-in-out infinite",
+        "pulse-fast": "pulse 0.5s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        "float-up": "floatUp 2.5s ease-out forwards",
+        wiggle: "wiggle 1s ease-in-out infinite",
+        "pulse-ring": "pulseRing 420ms ease-out forwards",
       },
     },
   },

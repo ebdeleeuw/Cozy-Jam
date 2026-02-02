@@ -17,9 +17,9 @@ const Visualizer: React.FC<VisualizerProps> = ({ activePlayer, status, pulseSign
       return;
     }
 
-    const strength = 1 + pulseSignal.velocity * 0.25;
+    const strength = 1 + pulseSignal.velocity * 0.3;
     setScale(strength);
-    const t = window.setTimeout(() => setScale(1), 140);
+    const t = window.setTimeout(() => setScale(1), 180);
     return () => window.clearTimeout(t);
   }, [pulseSignal, hasSignal]);
 
@@ -35,11 +35,23 @@ const Visualizer: React.FC<VisualizerProps> = ({ activePlayer, status, pulseSign
         style={{ transform: `scale(${scale * 1.5})` }}
       />
 
+      {/* Pulse ring (note hit) */}
+      {hasSignal && (
+        <div
+          key={pulseSignal.id}
+          className={`absolute inset-0 rounded-full border-2 ${colorTextClass} animate-pulse-ring`}
+          style={{
+            borderColor: 'currentColor',
+            opacity: 0.5,
+          }}
+        />
+      )}
+
       {/* Main Pulse Circle */}
       <div 
         className={`
           relative z-10 w-48 h-48 md:w-64 md:h-64 rounded-full shadow-xl 
-          flex items-center justify-center transition-all duration-500
+          flex items-center justify-center transition-transform duration-200
           ${activePlayer ? activePlayer.avatarColor : 'bg-gray-100'}
         `}
         style={{ transform: `scale(${scale})` }}
