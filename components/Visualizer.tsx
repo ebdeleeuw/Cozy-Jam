@@ -10,37 +10,18 @@ interface VisualizerProps {
 const Visualizer: React.FC<VisualizerProps> = ({ activePlayer, status, pulseSignal }) => {
   const [scale, setScale] = useState(1);
   const hasSignal = Boolean(activePlayer) || status === 'playing';
-  const targetRef = React.useRef(1);
 
   useEffect(() => {
     if (!hasSignal) {
       setScale(1);
-      targetRef.current = 1;
       return;
     }
 
     const strength = 1 + pulseSignal.velocity * 0.25;
-    targetRef.current = Math.max(targetRef.current, strength);
+    setScale(strength);
+    const t = window.setTimeout(() => setScale(1), 140);
+    return () => window.clearTimeout(t);
   }, [pulseSignal, hasSignal]);
-
-  useEffect(() => {
-    let raf = 0;
-
-    const tick = () => {
-      if (!hasSignal) {
-        setScale(1);
-        targetRef.current = 1;
-      } else {
-        // soft breathing decay
-        targetRef.current = 1 + (targetRef.current - 1) * 0.92;
-        setScale(targetRef.current);
-      }
-      raf = requestAnimationFrame(tick);
-    };
-
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [hasSignal]);
 
   const isMePlaying = status === 'playing';
   const colorClass = activePlayer ? activePlayer.avatarColor.replace('text-white', '') : 'bg-gray-200';
