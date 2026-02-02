@@ -1,5 +1,5 @@
 import http from "http";
-import { WebSocketServer } from "ws";
+import { WebSocketServer, WebSocket } from "ws";
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 8787;
 const TURN_DURATION = 30;
@@ -67,7 +67,7 @@ function broadcastState() {
   };
 
   for (const [id, ws] of sockets) {
-    if (ws.readyState !== ws.OPEN) continue;
+    if (ws.readyState !== WebSocket.OPEN) continue;
     ws.send(
       JSON.stringify({
         type: "state",
