@@ -107,6 +107,7 @@ function advanceTurn() {
   if (prev) {
     broadcastAllNotesOff(prev);
   }
+  broadcastState();
 }
 
 setInterval(() => {

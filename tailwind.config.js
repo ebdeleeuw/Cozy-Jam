@@ -40,5 +40,17 @@ export default {
       },
     },
   },
+  safelist: [
+    'bg-rose-200',
+    'bg-sky-200',
+    'bg-emerald-200',
+    'bg-amber-200',
+    'bg-violet-200',
+    'text-rose-200',
+    'text-sky-200',
+    'text-emerald-200',
+    'text-amber-200',
+    'text-violet-200',
+  ],
   plugins: [],
 };
