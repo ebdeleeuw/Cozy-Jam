@@ -29,7 +29,7 @@ const QueueDisplay: React.FC<QueueDisplayProps> = ({ queue }) => {
             {queue.map((user, idx) => (
               <li key={user.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-stone-50 transition-colors">
                 <span className="text-xs font-bold text-stone-300 w-4">#{idx + 1}</span>
-                <div className={`w-2 h-2 rounded-full ${user.avatarColor.split(' ')[0]}`} />
+                <div className={`w-2.5 h-2.5 rounded-full ${user.avatarColor}`} />
                 <span className="text-sm font-semibold text-stone-600">{user.name}</span>
               </li>
             ))}

@@ -23,14 +23,14 @@ const Visualizer: React.FC<VisualizerProps> = ({ activePlayer, status }) => {
   }, [activePlayer]);
 
   const isMePlaying = status === 'playing';
+  const colorClass = activePlayer ? activePlayer.avatarColor.replace('text-white', '') : 'bg-gray-200';
+  const colorTextClass = activePlayer ? activePlayer.avatarColor.replace('bg-', 'text-') : 'text-gray-300';
 
   return (
     <div className="relative flex items-center justify-center w-64 h-64 md:w-96 md:h-96 transition-all duration-700">
       {/* Outer ambient glow */}
       <div 
-        className={`absolute inset-0 rounded-full blur-3xl opacity-30 transition-colors duration-1000 ${
-          activePlayer ? activePlayer.avatarColor.replace('text-white', '') : 'bg-gray-200'
-        }`} 
+        className={`absolute inset-0 rounded-full blur-3xl opacity-30 transition-colors duration-1000 ${colorClass}`} 
         style={{ transform: `scale(${scale * 1.5})` }}
       />
 
@@ -71,10 +71,10 @@ const Visualizer: React.FC<VisualizerProps> = ({ activePlayer, status }) => {
       {/* Orbiting particles (decorative) */}
       {activePlayer && (
         <>
-          <div className="absolute w-full h-full animate-spin-slow opacity-40 pointer-events-none">
-             <div className="absolute top-0 left-1/2 w-4 h-4 bg-current rounded-full -translate-x-1/2 -translate-y-12" />
+          <div className={`absolute w-full h-full animate-spin-slow opacity-40 pointer-events-none ${colorTextClass}`}>
+             <div className={`absolute top-0 left-1/2 w-4 h-4 rounded-full -translate-x-1/2 -translate-y-12 ${colorClass}`} />
           </div>
-          <div className="absolute w-3/4 h-3/4 animate-spin-reverse-slow opacity-30 pointer-events-none border-2 border-dashed border-current rounded-full" />
+          <div className={`absolute w-3/4 h-3/4 animate-spin-reverse-slow opacity-30 pointer-events-none border-2 border-dashed border-current rounded-full ${colorTextClass}`} />
         </>
       )}
     </div>
