@@ -4,9 +4,10 @@ import { Users } from 'lucide-react';
 
 interface QueueDisplayProps {
   queue: User[];
+  currentUserId: string | null;
 }
 
-const QueueDisplay: React.FC<QueueDisplayProps> = ({ queue }) => {
+const QueueDisplay: React.FC<QueueDisplayProps> = ({ queue, currentUserId }) => {
   return (
     <div className="fixed bottom-0 right-8 z-50 group translate-y-[calc(100%-3rem)] hover:translate-y-0 transition-transform duration-500 ease-out">
       {/* Handle / Header */}
@@ -30,7 +31,9 @@ const QueueDisplay: React.FC<QueueDisplayProps> = ({ queue }) => {
               <li key={user.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-stone-50 transition-colors">
                 <span className="text-xs font-bold text-stone-300 w-4">#{idx + 1}</span>
                 <div className={`w-2.5 h-2.5 rounded-full ${user.avatarColor}`} />
-                <span className="text-sm font-semibold text-stone-600">{user.name}</span>
+                <span className="text-sm font-semibold text-stone-600">
+                  {currentUserId && user.id === currentUserId ? 'You' : user.name}
+                </span>
               </li>
             ))}
           </ul>

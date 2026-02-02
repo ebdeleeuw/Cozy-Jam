@@ -5,9 +5,10 @@ interface VisualizerProps {
   activePlayer: User | null;
   status: PlayerStatus;
   pulseSignal: { id: number; velocity: number };
+  currentUserId: string | null;
 }
 
-const Visualizer: React.FC<VisualizerProps> = ({ activePlayer, status, pulseSignal }) => {
+const Visualizer: React.FC<VisualizerProps> = ({ activePlayer, status, pulseSignal, currentUserId }) => {
   const [scale, setScale] = useState(1);
   const hasSignal = Boolean(activePlayer) || status === 'playing';
 
@@ -63,7 +64,7 @@ const Visualizer: React.FC<VisualizerProps> = ({ activePlayer, status, pulseSign
                 ♪
               </span>
               <span className="font-bold text-lg opacity-90 block">
-                 {activePlayer.name}
+                 {currentUserId && activePlayer.id === currentUserId ? 'You' : activePlayer.name}
               </span>
               {isMePlaying && (
                 <div className="flex flex-col items-center">

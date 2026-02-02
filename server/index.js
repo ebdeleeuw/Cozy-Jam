@@ -272,14 +272,13 @@ wss.on("connection", (ws, req) => {
       case "joinQueue": {
         const last = lastJoinLeaveAt.get(id) || 0;
         if (Date.now() - last < JOIN_COOLDOWN_MS) break;
+        if (queue.includes(id) || activePlayerId === id) break;
         lastJoinLeaveAt.set(id, Date.now());
-        if (!queue.includes(id) && activePlayerId !== id) {
-          if (!activePlayerId) {
-            activePlayerId = id;
-            timeRemaining = TURN_DURATION;
-          } else {
-            queue = [...queue, id];
-          }
+        if (!activePlayerId) {
+          activePlayerId = id;
+          timeRemaining = TURN_DURATION;
+        } else {
+          queue = [...queue, id];
         }
         break;
       }

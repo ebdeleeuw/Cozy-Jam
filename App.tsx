@@ -334,7 +334,12 @@ const App: React.FC = () => {
       <main className="flex flex-col items-center justify-center min-h-screen p-4 pb-24 relative z-10">
         {/* The visual center of the app */}
         <div className="mb-8 relative">
-          <Visualizer activePlayer={serverState.activePlayer} status={status} pulseSignal={pulseSignal} />
+          <Visualizer
+            activePlayer={serverState.activePlayer}
+            status={status}
+            pulseSignal={pulseSignal}
+            currentUserId={currentUser?.id ?? null}
+          />
         </div>
 
         {/* User Interaction Layer */}
@@ -356,7 +361,7 @@ const App: React.FC = () => {
 
       {/* Floating UI Elements */}
       <ReactionZone canReact={status !== 'playing'} particles={particles} onReact={handleReact} />
-      <QueueDisplay queue={serverState.queue} />
+      <QueueDisplay queue={serverState.queue} currentUserId={currentUser?.id ?? null} />
 
       {/* Decorative background blobs */}
       <div className="fixed top-1/4 left-10 w-64 h-64 bg-cozy-green rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-breathe pointer-events-none" />
