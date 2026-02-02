@@ -8,23 +8,30 @@ interface HeaderProps {
   activePlayer: User | null;
   timeRemaining: number;
   midiConnected: boolean;
+  wsStatus: 'connecting' | 'open' | 'closed';
 }
 
-const Header: React.FC<HeaderProps> = ({ activePlayer, timeRemaining, midiConnected }) => {
+const Header: React.FC<HeaderProps> = ({ activePlayer, timeRemaining, midiConnected, wsStatus }) => {
   const progressPercent = TURN_DURATION ? (timeRemaining / TURN_DURATION) * 100 : 0;
+  const wsLabel = wsStatus === 'open' ? 'Live' : wsStatus === 'connecting' ? 'Connecting' : 'Offline';
+  const wsColor = wsStatus === 'open' ? 'bg-emerald-500' : wsStatus === 'connecting' ? 'bg-amber-400' : 'bg-rose-400';
 
   return (
     <header className="fixed top-0 left-0 w-full p-6 flex justify-between items-start pointer-events-none z-40">
       {/* Brand & Midi Status */}
       <div className="pointer-events-auto flex flex-col gap-2">
         <div>
-            <h1 className="text-2xl font-extrabold text-stone-800 tracking-tight flex items-center gap-2">
+          <h1 className="text-2xl font-extrabold text-stone-800 tracking-tight flex items-center gap-2">
             <span className="text-3xl">🎹</span> Cozy Jam
-            </h1>
-            <p className="text-stone-400 text-sm font-medium ml-1">Anonymous MIDI Room</p>
+          </h1>
+          <p className="text-stone-400 text-sm font-medium ml-1">Anonymous MIDI Room</p>
         </div>
-        <div className="ml-1">
-            <MidiStatus connected={midiConnected} />
+        <div className="ml-1 flex items-center gap-2">
+          <MidiStatus connected={midiConnected} />
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold bg-white/80 border-stone-200 text-stone-500">
+            <span className={`w-2 h-2 rounded-full ${wsColor}`} />
+            {wsLabel}
+          </div>
         </div>
       </div>
 

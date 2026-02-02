@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { InstrumentType, LoopStatus, PlayerStatus, ServerState, User } from './types';
 import { TURN_DURATION, WS_URL } from './constants';
 import Visualizer from './components/Visualizer';
@@ -17,38 +17,69 @@ const App: React.FC = () => {
   });
   const [loopStatus, setLoopStatus] = useState<LoopStatus>('inactive');
   const [midiConnected, setMidiConnected] = useState(false);
-  const [socket, setSocket] = useState<WebSocket | null>(null);
+  const [wsStatus, setWsStatus] = useState<'connecting' | 'open' | 'closed'>('connecting');
+  const socketRef = useRef<WebSocket | null>(null);
+  const reconnectTimer = useRef<number | null>(null);
+  const pendingJoin = useRef<boolean>(false);
 
   useEffect(() => {
-    const ws = new WebSocket(WS_URL);
-    setSocket(ws);
+    let cancelled = false;
 
-    ws.onmessage = (event) => {
-      let message: any;
-      try {
-        message = JSON.parse(event.data);
-      } catch {
-        return;
-      }
+    const connect = () => {
+      setWsStatus('connecting');
+      const ws = new WebSocket(WS_URL);
+      socketRef.current = ws;
 
-      if (message.type === 'hello') {
-        setCurrentUser(message.you);
-        return;
-      }
-
-      if (message.type === 'state') {
-        setServerState(message.state as ServerState);
-        if (message.you?.loopStatus) {
-          setLoopStatus(message.you.loopStatus as LoopStatus);
+      ws.onopen = () => {
+        if (cancelled) return;
+        setWsStatus('open');
+        if (pendingJoin.current) {
+          ws.send(JSON.stringify({ type: 'joinQueue' }));
+          pendingJoin.current = false;
         }
-      }
+      };
+
+      ws.onmessage = (event) => {
+        let message: any;
+        try {
+          message = JSON.parse(event.data);
+        } catch {
+          return;
+        }
+
+        if (message.type === 'hello') {
+          setCurrentUser(message.you);
+          return;
+        }
+
+        if (message.type === 'state') {
+          setServerState(message.state as ServerState);
+          if (message.you?.loopStatus) {
+            setLoopStatus(message.you.loopStatus as LoopStatus);
+          }
+        }
+      };
+
+      ws.onclose = () => {
+        if (cancelled) return;
+        setWsStatus('closed');
+        socketRef.current = null;
+        if (reconnectTimer.current) window.clearTimeout(reconnectTimer.current);
+        reconnectTimer.current = window.setTimeout(connect, 1200);
+      };
+
+      ws.onerror = () => {
+        ws.close();
+      };
     };
 
-    ws.onclose = () => {
-      setSocket(null);
-    };
+    connect();
 
-    return () => ws.close();
+    return () => {
+      cancelled = true;
+      if (reconnectTimer.current) window.clearTimeout(reconnectTimer.current);
+      socketRef.current?.close();
+    };
   }, []);
 
   useEffect(() => {
@@ -83,11 +114,19 @@ const App: React.FC = () => {
   }, [currentUser, serverState.queue]);
 
   const send = (payload: Record<string, unknown>) => {
-    if (!socket || socket.readyState !== WebSocket.OPEN) return;
+    const socket = socketRef.current;
+    if (!socket || socket.readyState !== WebSocket.OPEN) return false;
     socket.send(JSON.stringify(payload));
+    return true;
   };
 
-  const handleJoinQueue = () => send({ type: 'joinQueue' });
+  const handleJoinQueue = () => {
+    const sent = send({ type: 'joinQueue' });
+    if (!sent) {
+      pendingJoin.current = true;
+      setWsStatus('connecting');
+    }
+  };
   const handleLeaveQueue = () => send({ type: 'leaveQueue' });
   const handleSetInstrument = (inst: InstrumentType) => send({ type: 'setInstrument', instrument: inst });
   const handleStartLoop = () => send({ type: 'loopStart' });
@@ -103,6 +142,7 @@ const App: React.FC = () => {
         activePlayer={serverState.activePlayer}
         timeRemaining={serverState.timeRemaining}
         midiConnected={midiConnected}
+        wsStatus={wsStatus}
       />
 
       <main className="flex flex-col items-center justify-center min-h-screen p-4 pb-24 relative z-10">
