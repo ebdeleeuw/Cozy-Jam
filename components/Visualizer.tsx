@@ -10,18 +10,37 @@ interface VisualizerProps {
 const Visualizer: React.FC<VisualizerProps> = ({ activePlayer, status, pulseSignal }) => {
   const [scale, setScale] = useState(1);
   const hasSignal = Boolean(activePlayer) || status === 'playing';
+  const targetRef = React.useRef(1);
 
   useEffect(() => {
     if (!hasSignal) {
       setScale(1);
+      targetRef.current = 1;
       return;
     }
 
-    const strength = 1 + pulseSignal.velocity * 0.3;
-    setScale(strength);
-    const t = window.setTimeout(() => setScale(1), 180);
-    return () => window.clearTimeout(t);
+    const strength = 1 + pulseSignal.velocity * 0.25;
+    targetRef.current = Math.max(targetRef.current, strength);
   }, [pulseSignal, hasSignal]);
+
+  useEffect(() => {
+    let raf = 0;
+
+    const tick = () => {
+      if (!hasSignal) {
+        setScale(1);
+        targetRef.current = 1;
+      } else {
+        // soft breathing decay
+        targetRef.current = 1 + (targetRef.current - 1) * 0.92;
+        setScale(targetRef.current);
+      }
+      raf = requestAnimationFrame(tick);
+    };
+
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [hasSignal]);
 
   const isMePlaying = status === 'playing';
   const colorClass = activePlayer ? activePlayer.avatarColor.replace('text-white', '') : 'bg-gray-200';
@@ -36,7 +55,7 @@ const Visualizer: React.FC<VisualizerProps> = ({ activePlayer, status, pulseSign
       />
 
       {/* Pulse ring (note hit) */}
-      {hasSignal && (
+      {hasSignal && pulseSignal.id !== 0 && (
         <div
           key={pulseSignal.id}
           className={`absolute inset-0 rounded-full border-2 ${colorTextClass} animate-pulse-ring`}
