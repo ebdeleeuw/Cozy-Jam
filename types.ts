@@ -29,3 +29,12 @@ export interface ServerState {
   timeRemaining: number;
   currentInstrument: InstrumentType;
 }
+
+export interface NoteMessage {
+  type: 'note';
+  note: number;
+  velocity: number;
+  on: boolean;
+  instrument: InstrumentType;
+  from: string;
+}

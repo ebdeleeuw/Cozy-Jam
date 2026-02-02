@@ -165,6 +165,23 @@ wss.on("connection", (ws) => {
       case "loopClear":
         loopStatus.set(id, "inactive");
         break;
+      case "note": {
+        if (activePlayerId !== id) break;
+        if (typeof msg.note !== "number" || typeof msg.velocity !== "number") break;
+        const payload = {
+          type: "note",
+          note: msg.note,
+          velocity: msg.velocity,
+          on: Boolean(msg.on),
+          instrument: currentInstrument,
+          from: id,
+        };
+        for (const [, wsClient] of sockets) {
+          if (wsClient.readyState !== WebSocket.OPEN) continue;
+          wsClient.send(JSON.stringify(payload));
+        }
+        return; // skip broadcastState for note messages
+      }
       default:
         break;
     }

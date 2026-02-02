@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { InstrumentType, LoopStatus, PlayerStatus, ServerState, User } from './types';
 import { TURN_DURATION, WS_URL } from './constants';
+import { SynthEngine } from './src/audio/synth';
 import Visualizer from './components/Visualizer';
 import Controls from './components/Controls';
 import QueueDisplay from './components/QueueDisplay';
@@ -21,6 +22,9 @@ const App: React.FC = () => {
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<number | null>(null);
   const pendingJoin = useRef<boolean>(false);
+  const synthRef = useRef<SynthEngine | null>(null);
+  const statusRef = useRef<PlayerStatus>('idle');
+  const instrumentRef = useRef<InstrumentType>(InstrumentType.PIANO);
 
   useEffect(() => {
     let cancelled = false;
@@ -57,6 +61,25 @@ const App: React.FC = () => {
           if (message.you?.loopStatus) {
             setLoopStatus(message.you.loopStatus as LoopStatus);
           }
+          return;
+        }
+
+        if (message.type === 'note') {
+          const { note, velocity, on, instrument, from } = message;
+          if (typeof note !== 'number' || typeof velocity !== 'number') return;
+          if (!synthRef.current) synthRef.current = new SynthEngine();
+          const synth = synthRef.current;
+          const ctx = synth.ensureContext();
+          const buffer = 0.06;
+          const when = ctx.currentTime + buffer;
+
+          if (currentUser && from === currentUser.id) return;
+
+          if (on) {
+            synth.noteOn(note, velocity, instrument, when);
+          } else {
+            synth.noteOff(note, when);
+          }
         }
       };
 
@@ -88,15 +111,43 @@ const App: React.FC = () => {
       return;
     }
 
+    const handleMidiMessage = (event: any) => {
+      const data = event.data as Uint8Array;
+      if (!data || data.length < 3) return;
+      const command = data[0] & 0xf0;
+      const note = data[1];
+      const velocity = data[2] / 127;
+
+      if (statusRef.current !== 'playing') return;
+
+      if (!synthRef.current) synthRef.current = new SynthEngine();
+      const synth = synthRef.current;
+
+      if (command === 0x90 && velocity > 0) {
+        synth.resume();
+        synth.noteOn(note, velocity, instrumentRef.current);
+        send({ type: 'note', note, velocity, on: true });
+      } else if (command === 0x80 || (command === 0x90 && velocity === 0)) {
+        synth.noteOff(note);
+        send({ type: 'note', note, velocity: 0, on: false });
+      }
+    };
+
+    const attachInputs = (access: any) => {
+      const inputs = access.inputs.values();
+      let hasAny = false;
+      for (const input of inputs) {
+        hasAny = true;
+        input.onmidimessage = handleMidiMessage;
+      }
+      setMidiConnected(hasAny);
+    };
+
     (navigator as any)
       .requestMIDIAccess()
       .then((access: any) => {
-        const hasInputs = access.inputs && access.inputs.size > 0;
-        setMidiConnected(hasInputs);
-        access.onstatechange = () => {
-          const hasAny = access.inputs && access.inputs.size > 0;
-          setMidiConnected(hasAny);
-        };
+        attachInputs(access);
+        access.onstatechange = () => attachInputs(access);
       })
       .catch(() => setMidiConnected(false));
   }, []);
@@ -107,6 +158,14 @@ const App: React.FC = () => {
     if (serverState.queue.some((u) => u.id === currentUser.id)) return 'queued';
     return 'idle';
   }, [currentUser, serverState]);
+
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
+
+  useEffect(() => {
+    instrumentRef.current = serverState.currentInstrument;
+  }, [serverState.currentInstrument]);
 
   const queuePosition = useMemo(() => {
     if (!currentUser) return 0;
