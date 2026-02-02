@@ -25,7 +25,9 @@ const App: React.FC = () => {
   const synthRef = useRef<SynthEngine | null>(null);
   const statusRef = useRef<PlayerStatus>('idle');
   const instrumentRef = useRef<InstrumentType>(InstrumentType.PIANO);
+  const activePlayerRef = useRef<string | null>(null);
   const [particles, setParticles] = useState<ReactionParticle[]>([]);
+  const [pulseSignal, setPulseSignal] = useState<{ id: number; velocity: number }>({ id: 0, velocity: 0 });
   const maxParticles = 40;
 
   useEffect(() => {
@@ -79,6 +81,9 @@ const App: React.FC = () => {
 
           if (on) {
             synth.noteOn(note, velocity, instrument, when);
+            if (from === activePlayerRef.current) {
+              triggerPulse(velocity);
+            }
           } else {
             synth.noteOff(note, when);
           }
@@ -144,6 +149,7 @@ const App: React.FC = () => {
         synth.resume();
         synth.noteOn(note, velocity, instrumentRef.current);
         send({ type: 'note', note, velocity, on: true });
+        triggerPulse(velocity);
       } else if (command === 0x80 || (command === 0x90 && velocity === 0)) {
         synth.noteOff(note);
         send({ type: 'note', note, velocity: 0, on: false });
@@ -202,6 +208,7 @@ const App: React.FC = () => {
       synth.resume();
       synth.noteOn(note, 0.7, instrumentRef.current);
       send({ type: 'note', note, velocity: 0.7, on: true });
+      triggerPulse(0.7);
     };
 
     const onKeyUp = (e: KeyboardEvent) => {
@@ -244,6 +251,10 @@ const App: React.FC = () => {
     instrumentRef.current = serverState.currentInstrument;
   }, [serverState.currentInstrument]);
 
+  useEffect(() => {
+    activePlayerRef.current = serverState.activePlayer?.id ?? null;
+  }, [serverState.activePlayer]);
+
   const queuePosition = useMemo(() => {
     if (!currentUser) return 0;
     return serverState.queue.findIndex((u) => u.id === currentUser.id) + 1;
@@ -254,6 +265,12 @@ const App: React.FC = () => {
     if (!socket || socket.readyState !== WebSocket.OPEN) return false;
     socket.send(JSON.stringify(payload));
     return true;
+  };
+
+  const triggerPulse = (velocity: number) => {
+    const id = Date.now() + Math.random();
+    const vel = Math.min(1, Math.max(0.1, velocity));
+    setPulseSignal({ id, velocity: vel });
   };
 
   const spawnParticle = (emoji: string, burst = false) => {
@@ -317,7 +334,7 @@ const App: React.FC = () => {
       <main className="flex flex-col items-center justify-center min-h-screen p-4 pb-24 relative z-10">
         {/* The visual center of the app */}
         <div className="mb-8 relative">
-          <Visualizer activePlayer={serverState.activePlayer} status={status} />
+          <Visualizer activePlayer={serverState.activePlayer} status={status} pulseSignal={pulseSignal} />
         </div>
 
         {/* User Interaction Layer */}

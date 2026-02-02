@@ -4,22 +4,40 @@ import { PlayerStatus, User } from '../types';
 interface VisualizerProps {
   activePlayer: User | null;
   status: PlayerStatus;
+  pulseSignal: { id: number; velocity: number };
 }
 
-const Visualizer: React.FC<VisualizerProps> = ({ activePlayer, status }) => {
+const Visualizer: React.FC<VisualizerProps> = ({ activePlayer, status, pulseSignal }) => {
   const [scale, setScale] = useState(1);
-  
-  // Simulate some visual activity when playing
+  const targetRef = React.useRef(0);
+  const currentRef = React.useRef(0);
+
   useEffect(() => {
     if (!activePlayer) return;
+    const boost = 0.35 + pulseSignal.velocity * 0.65;
+    targetRef.current = Math.min(1, Math.max(targetRef.current, boost));
+  }, [pulseSignal, activePlayer]);
 
-    const interval = setInterval(() => {
-      // Random gentle fluctuation to simulate music
-      const randomScale = 0.95 + Math.random() * 0.15;
-      setScale(randomScale);
-    }, 400);
+  useEffect(() => {
+    let raf = 0;
 
-    return () => clearInterval(interval);
+    const tick = () => {
+      if (!activePlayer) {
+        setScale(1);
+        currentRef.current = 0;
+        targetRef.current = 0;
+      } else {
+        // Smooth rise/decay
+        currentRef.current += (targetRef.current - currentRef.current) * 0.12;
+        targetRef.current *= 0.92;
+        const next = 1 + currentRef.current * 0.22;
+        setScale(next);
+      }
+      raf = requestAnimationFrame(tick);
+    };
+
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
   }, [activePlayer]);
 
   const isMePlaying = status === 'playing';
