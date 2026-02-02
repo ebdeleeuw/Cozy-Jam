@@ -152,6 +152,60 @@ const App: React.FC = () => {
       .catch(() => setMidiConnected(false));
   }, []);
 
+  useEffect(() => {
+    const keyToNote: Record<string, number> = {
+      a: 60,
+      w: 61,
+      s: 62,
+      e: 63,
+      d: 64,
+      f: 65,
+      t: 66,
+      g: 67,
+      y: 68,
+      h: 69,
+      u: 70,
+      j: 71,
+      k: 72,
+    };
+
+    const down = new Set<string>();
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.repeat) return;
+      const key = e.key.toLowerCase();
+      const note = keyToNote[key];
+      if (note == null) return;
+      if (statusRef.current !== 'playing') return;
+      if (down.has(key)) return;
+      down.add(key);
+
+      if (!synthRef.current) synthRef.current = new SynthEngine();
+      const synth = synthRef.current;
+      synth.resume();
+      synth.noteOn(note, 0.7, instrumentRef.current);
+      send({ type: 'note', note, velocity: 0.7, on: true });
+    };
+
+    const onKeyUp = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase();
+      const note = keyToNote[key];
+      if (note == null) return;
+      if (down.has(key)) down.delete(key);
+      if (!synthRef.current) synthRef.current = new SynthEngine();
+      const synth = synthRef.current;
+      synth.noteOff(note);
+      send({ type: 'note', note, velocity: 0, on: false });
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+    };
+  }, []);
+
   const status: PlayerStatus = useMemo(() => {
     if (!currentUser) return 'idle';
     if (serverState.activePlayer?.id === currentUser.id) return 'playing';
