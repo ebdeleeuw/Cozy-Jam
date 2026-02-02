@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { InstrumentType, LoopStatus, PlayerStatus, ServerState, User } from './types';
 import { TURN_DURATION, WS_URL } from './constants';
 import { SynthEngine } from './src/audio/synth';
@@ -237,7 +237,7 @@ const App: React.FC = () => {
     return 'idle';
   }, [currentUser, serverState]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const prev = statusRef.current;
     statusRef.current = status;
     if (prev === 'playing' && status !== 'playing') {

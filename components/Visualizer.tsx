@@ -11,18 +11,19 @@ const Visualizer: React.FC<VisualizerProps> = ({ activePlayer, status, pulseSign
   const [scale, setScale] = useState(1);
   const targetRef = React.useRef(0);
   const currentRef = React.useRef(0);
+  const hasSignal = Boolean(activePlayer) || status === 'playing';
 
   useEffect(() => {
-    if (!activePlayer) return;
+    if (!hasSignal) return;
     const boost = 0.35 + pulseSignal.velocity * 0.65;
     targetRef.current = Math.min(1, Math.max(targetRef.current, boost));
-  }, [pulseSignal, activePlayer]);
+  }, [pulseSignal, hasSignal]);
 
   useEffect(() => {
     let raf = 0;
 
     const tick = () => {
-      if (!activePlayer) {
+      if (!hasSignal) {
         setScale(1);
         currentRef.current = 0;
         targetRef.current = 0;
@@ -38,7 +39,7 @@ const Visualizer: React.FC<VisualizerProps> = ({ activePlayer, status, pulseSign
 
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [activePlayer]);
+  }, [hasSignal]);
 
   const isMePlaying = status === 'playing';
   const colorClass = activePlayer ? activePlayer.avatarColor.replace('text-white', '') : 'bg-gray-200';
