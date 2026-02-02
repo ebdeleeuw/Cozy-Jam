@@ -4,15 +4,50 @@ import { WebSocketServer, WebSocket } from "ws";
 const PORT = process.env.PORT ? Number(process.env.PORT) : 8787;
 const TURN_DURATION = 30;
 
-const NAMES = [
-  "Sleepy Fox",
-  "Cozy Bear",
-  "Gentle Cat",
-  "Warm Tea",
-  "Soft Cloud",
-  "Quiet Owl",
-  "Mellow Moon",
-  "Calm Leaf",
+const ADJECTIVES = [
+  "Sleepy",
+  "Cozy",
+  "Gentle",
+  "Warm",
+  "Soft",
+  "Quiet",
+  "Mellow",
+  "Calm",
+  "Velvet",
+  "Drifting",
+  "Sunny",
+  "Moonlit",
+  "Kind",
+  "Tender",
+  "Hushed",
+  "Snug",
+  "Golden",
+  "Breezy",
+  "Blooming",
+  "Dusky",
+];
+
+const NOUNS = [
+  "Fox",
+  "Bear",
+  "Cat",
+  "Tea",
+  "Cloud",
+  "Owl",
+  "Moon",
+  "Leaf",
+  "Fern",
+  "Pebble",
+  "Hearth",
+  "Dawn",
+  "Drift",
+  "River",
+  "Glade",
+  "Pine",
+  "Garden",
+  "Meadow",
+  "Star",
+  "Bloom",
 ];
 
 const COLORS = [
@@ -21,6 +56,11 @@ const COLORS = [
   "bg-emerald-200",
   "bg-amber-200",
   "bg-violet-200",
+  "bg-indigo-200",
+  "bg-teal-200",
+  "bg-lime-200",
+  "bg-orange-200",
+  "bg-slate-200",
 ];
 
 const server = http.createServer();
@@ -61,10 +101,27 @@ function pickRandom(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+let lastAssignedName = null;
+
+function generateName(activeNames) {
+  let name = "";
+  let guard = 0;
+  do {
+    const adj = pickRandom(ADJECTIVES);
+    const noun = pickRandom(NOUNS);
+    name = `${adj} ${noun}`;
+    guard += 1;
+  } while ((name === lastAssignedName || activeNames.has(name)) && guard < 20);
+
+  lastAssignedName = name;
+  return name;
+}
+
 function createUser(id, ip) {
+  const activeNames = new Set(Array.from(users.values()).map((u) => u.name));
   return {
     id,
-    name: pickRandom(NAMES),
+    name: generateName(activeNames),
     avatarColor: pickRandom(COLORS),
     ip,
   };
