@@ -29,7 +29,7 @@ const wss = new WebSocketServer({ server });
 const NOTE_RATE_LIMIT = 120; // per 5s
 const MSG_RATE_LIMIT = 30; // per 5s
 const JOIN_COOLDOWN_MS = 2000;
-const INSTRUMENT_COOLDOWN_MS = 2000;
+const INSTRUMENT_COOLDOWN_MS = 500;
 const MAX_CONNECTIONS_PER_IP = 3;
 const DISCONNECT_COOLDOWN_MS = 3000;
 
