@@ -102,18 +102,38 @@ function pickRandom(arr) {
 }
 
 let lastAssignedName = null;
+const recentNames = [];
+const RECENT_LIMIT = 50;
+
+function pushRecent(name) {
+  recentNames.push(name);
+  if (recentNames.length > RECENT_LIMIT) {
+    recentNames.shift();
+  }
+}
 
 function generateName(activeNames) {
   let name = "";
   let guard = 0;
-  do {
+
+  while (guard < 40) {
     const adj = pickRandom(ADJECTIVES);
     const noun = pickRandom(NOUNS);
     name = `${adj} ${noun}`;
     guard += 1;
-  } while ((name === lastAssignedName || activeNames.has(name)) && guard < 20);
+
+    const inRecent = recentNames.includes(name) || name === lastAssignedName;
+    const inActive = activeNames.has(name);
+
+    if (guard < 20) {
+      if (!inRecent && !inActive) break;
+    } else {
+      if (!inRecent) break;
+    }
+  }
 
   lastAssignedName = name;
+  pushRecent(name);
   return name;
 }
 
