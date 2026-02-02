@@ -194,6 +194,19 @@ const App: React.FC = () => {
 
     const down = new Set<string>();
 
+    const stopAllKeys = () => {
+      if (!synthRef.current) synthRef.current = new SynthEngine();
+      const synth = synthRef.current;
+      for (const key of Array.from(down)) {
+        const note = keyToNote[key];
+        if (note != null) {
+          synth.noteOff(note);
+          send({ type: 'note', note, velocity: 0, on: false });
+        }
+      }
+      down.clear();
+    };
+
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.repeat) return;
       const key = e.key.toLowerCase();
@@ -222,11 +235,22 @@ const App: React.FC = () => {
       send({ type: 'note', note, velocity: 0, on: false });
     };
 
+    const onBlur = () => {
+      if (statusRef.current !== 'playing') return;
+      stopAllKeys();
+    };
+
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', onBlur);
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) onBlur();
+    });
+
     return () => {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('blur', onBlur);
     };
   }, []);
 

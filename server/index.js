@@ -315,13 +315,14 @@ wss.on("connection", (ws, req) => {
         break;
       case "note": {
         if (activePlayerId !== id) break;
-        if (!withinRate(noteBuckets, id, NOTE_RATE_LIMIT, 5000)) break;
         if (typeof msg.note !== "number" || typeof msg.velocity !== "number") break;
+        const isOn = Boolean(msg.on);
+        if (isOn && !withinRate(noteBuckets, id, NOTE_RATE_LIMIT, 5000)) break;
         const payload = {
           type: "note",
           note: msg.note,
           velocity: msg.velocity,
-          on: Boolean(msg.on),
+          on: isOn,
           instrument: currentInstrument,
           from: id,
         };
