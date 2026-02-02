@@ -26,12 +26,31 @@ const COLORS = [
 const server = http.createServer();
 const wss = new WebSocketServer({ server });
 
+const NOTE_RATE_LIMIT = 120; // per 5s
+const MSG_RATE_LIMIT = 30; // per 5s
+const JOIN_COOLDOWN_MS = 2000;
+const INSTRUMENT_COOLDOWN_MS = 2000;
+const MAX_CONNECTIONS_PER_IP = 3;
+const DISCONNECT_COOLDOWN_MS = 3000;
+
 /** @type {Map<string, WebSocket>} */
 const sockets = new Map();
-/** @type {Map<string, {id: string, name: string, avatarColor: string}>} */
+/** @type {Map<string, {id: string, name: string, avatarColor: string, ip: string}>} */
 const users = new Map();
 /** @type {Map<string, 'inactive' | 'recording' | 'playing'>} */
 const loopStatus = new Map();
+/** @type {Map<string, {windowStart: number, count: number}>} */
+const noteBuckets = new Map();
+/** @type {Map<string, {windowStart: number, count: number}>} */
+const msgBuckets = new Map();
+/** @type {Map<string, number>} */
+const lastJoinLeaveAt = new Map();
+/** @type {Map<string, number>} */
+const lastInstrumentAt = new Map();
+/** @type {Map<string, number>} */
+const lastDisconnectAt = new Map();
+/** @type {Map<string, number>} */
+const ipConnections = new Map();
 /** @type {string[]} */
 let queue = [];
 let activePlayerId = null;
@@ -42,12 +61,33 @@ function pickRandom(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-function createUser(id) {
+function createUser(id, ip) {
   return {
     id,
     name: pickRandom(NAMES),
     avatarColor: pickRandom(COLORS),
+    ip,
   };
+}
+
+function getIpFromReq(req) {
+  const forwarded = req?.headers?.["x-forwarded-for"];
+  if (typeof forwarded === "string") {
+    return forwarded.split(",")[0].trim();
+  }
+  return req?.socket?.remoteAddress || "unknown";
+}
+
+function withinRate(bucketMap, id, limit, windowMs) {
+  const now = Date.now();
+  const bucket = bucketMap.get(id) || { windowStart: now, count: 0 };
+  if (now - bucket.windowStart > windowMs) {
+    bucket.windowStart = now;
+    bucket.count = 0;
+  }
+  bucket.count += 1;
+  bucketMap.set(id, bucket);
+  return bucket.count <= limit;
 }
 
 function getQueueUsers() {
@@ -119,9 +159,18 @@ setInterval(() => {
   broadcastState();
 }, 1000);
 
-wss.on("connection", (ws) => {
+wss.on("connection", (ws, req) => {
+  const ip = getIpFromReq(req);
+  const ipCount = ipConnections.get(ip) || 0;
+  const lastDisc = lastDisconnectAt.get(ip) || 0;
+  if (ipCount >= MAX_CONNECTIONS_PER_IP || Date.now() - lastDisc < DISCONNECT_COOLDOWN_MS) {
+    ws.close();
+    return;
+  }
+  ipConnections.set(ip, ipCount + 1);
+
   const id = Math.random().toString(36).slice(2, 9);
-  const user = createUser(id);
+  const user = createUser(id, ip);
   sockets.set(id, ws);
   users.set(id, user);
   loopStatus.set(id, "inactive");
@@ -140,9 +189,13 @@ wss.on("connection", (ws) => {
     }
 
     if (!msg || typeof msg.type !== "string") return;
+    if (!withinRate(msgBuckets, id, MSG_RATE_LIMIT, 5000)) return;
 
     switch (msg.type) {
       case "joinQueue": {
+        const last = lastJoinLeaveAt.get(id) || 0;
+        if (Date.now() - last < JOIN_COOLDOWN_MS) break;
+        lastJoinLeaveAt.set(id, Date.now());
         if (!queue.includes(id) && activePlayerId !== id) {
           if (!activePlayerId) {
             activePlayerId = id;
@@ -154,6 +207,9 @@ wss.on("connection", (ws) => {
         break;
       }
       case "leaveQueue": {
+        const last = lastJoinLeaveAt.get(id) || 0;
+        if (Date.now() - last < JOIN_COOLDOWN_MS) break;
+        lastJoinLeaveAt.set(id, Date.now());
         queue = queue.filter((q) => q !== id);
         if (activePlayerId === id) {
           advanceTurn();
@@ -161,10 +217,13 @@ wss.on("connection", (ws) => {
         break;
       }
       case "setInstrument": {
+        const last = lastInstrumentAt.get(id) || 0;
+        if (Date.now() - last < INSTRUMENT_COOLDOWN_MS) break;
         if (activePlayerId === id && typeof msg.instrument === "string") {
           const allowed = new Set(["PIANO", "DRUMS", "SYNTH"]);
           if (allowed.has(msg.instrument)) {
             currentInstrument = msg.instrument;
+            lastInstrumentAt.set(id, Date.now());
           }
         }
         break;
@@ -180,6 +239,7 @@ wss.on("connection", (ws) => {
         break;
       case "note": {
         if (activePlayerId !== id) break;
+        if (!withinRate(noteBuckets, id, NOTE_RATE_LIMIT, 5000)) break;
         if (typeof msg.note !== "number" || typeof msg.velocity !== "number") break;
         const payload = {
           type: "note",
@@ -215,6 +275,18 @@ wss.on("connection", (ws) => {
     sockets.delete(id);
     users.delete(id);
     loopStatus.delete(id);
+    noteBuckets.delete(id);
+    msgBuckets.delete(id);
+    lastJoinLeaveAt.delete(id);
+    lastInstrumentAt.delete(id);
+
+    const ip = user.ip;
+    if (ip) {
+      const count = ipConnections.get(ip) || 1;
+      ipConnections.set(ip, Math.max(0, count - 1));
+      lastDisconnectAt.set(ip, Date.now());
+    }
+
     queue = queue.filter((q) => q !== id);
     if (activePlayerId === id) {
       advanceTurn();
