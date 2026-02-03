@@ -28,7 +28,10 @@ const Header: React.FC<HeaderProps> = ({ activePlayer, timeRemaining, midiConnec
         </div>
         <div className="ml-1 flex items-center gap-2">
           <MidiStatus connected={midiConnected} />
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold bg-white/80 border-stone-200 text-stone-500">
+          <div
+            data-testid="ws-status"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold bg-white/80 border-stone-200 text-stone-500"
+          >
             <span className={`w-2 h-2 rounded-full ${wsColor}`} />
             {wsLabel}
           </div>
@@ -40,7 +43,7 @@ const Header: React.FC<HeaderProps> = ({ activePlayer, timeRemaining, midiConnec
         <div className="flex flex-col items-end gap-2 pointer-events-auto animate-slide-down">
           <div className="bg-white pl-4 pr-1 py-1 rounded-full shadow-sm border border-stone-100 flex items-center gap-3">
              <span className="text-sm font-bold text-stone-600">
-               On Stage: <span className="text-stone-800">{activePlayer.name}</span>
+               On Stage: <span className="text-stone-800" data-testid="on-stage-name">{activePlayer.name}</span>
              </span>
              <div className="bg-stone-100 rounded-full px-3 py-1.5 flex items-center gap-1.5 min-w-[70px] justify-center">
                 <Clock className="w-3 h-3 text-stone-400" />
