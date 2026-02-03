@@ -19,7 +19,7 @@ function waitForState(ws: WebSocket, predicate: (state: any) => boolean) {
   });
 }
 
-describe('ws note gating', () => {
+describe.sequential('ws note gating', () => {
   it('ignores notes from non-active users', async () => {
     const server = await startServer();
     await new Promise((r) => setTimeout(r, 300));
